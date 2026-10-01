@@ -1,0 +1,28 @@
+[package]
+name = "usdcx-burn-validation"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Validates a USDCx burn note on Miden with the decoder the faucet's own code uses"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "validate-burn"
+path = "src/main.rs"
+
+# The three Miden crates are pinned to the commit of 0xMiden/protocol PR 3983 that this crate was
+# validated against (workspace version 0.17.0-rc.9). `miden-usdcx` is not published on crates.io
+# yet; once a release containing the PR exists, replace the three lines with that version.
+[dependencies]
+miden-protocol  = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb" }
+miden-standards = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb" }
+miden-usdcx     = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb" }
+hex = "0.4"
+thiserror = "2"
+
+[dev-dependencies]
+anyhow = "1"
+# `AccountId::dummy` for deterministic test ids
+miden-protocol = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb", features = ["testing"] }
