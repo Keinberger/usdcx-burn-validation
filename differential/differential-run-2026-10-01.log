@@ -1,0 +1,31 @@
+# differential_burn_validation run
+# date: 2026-10-01T16:23:33Z
+# export: PR 3983 commit d1d3e6a01cca69527793568436afec937a4fc081 at /Users/philipp/Documents/Work/Miden-Coding/protocol-pr3983-src
+# test file sha256: e0e8f454bf2fb578f2be69362f2ba65b2d8d4cfb43d62043b327577e6d191142
+# validator lib sha256: c6171e69d7fd84cabcd2c0d07695246c0f326c6fb932996d31792231a83ac58f
+# command: cargo +1.98.1 test -p miden-usdcx --test differential_burn_validation -- --nocapture
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2m 02s
+     Running tests/differential_burn_validation.rs (target/debug/deps/differential_burn_validation-298a972381fa97f4)
+
+running 17 tests
+test faucet_and_validator_agree::case_10_padding_not_zero ... ok
+test faucet_and_validator_agree::case_05_four_words ... ok
+test faucet_and_validator_agree::case_09_domain_not_u32 ... ok
+test faucet_and_validator_agree::case_04_missing_withdrawal ... ok
+test faucet_and_validator_agree::case_07_missing_routing ... ok
+test faucet_and_validator_agree::case_08_routed_elsewhere ... ok
+test faucet_and_validator_agree::case_06_extra_attachment ... ok
+test faucet_and_validator_agree::case_02_built_by_the_crate ... ok
+test faucet_and_validator_agree::case_01_valid ... ok
+test faucet_and_validator_agree::case_03_other_tag ... ok
+test old_layout_with_evm_address_pays_a_different_recipient ... ok
+test faucet_and_validator_agree::case_15_domain_is_test_faucet_domain ... ok
+test faucet_and_validator_agree::case_11_recipient_limb_not_u32 ... ok
+test faucet_and_validator_agree::case_12_old_scheme_number ... ok
+test faucet_and_validator_agree::case_13_old_layout_full_recipient ... ok
+test faucet_and_validator_agree::case_14_old_layout_evm_recipient ... ok
+test faucet_and_validator_agree::case_16_domain_is_miden ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.78s
+
+# exit 
