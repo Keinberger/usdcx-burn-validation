@@ -16,13 +16,15 @@ path = "src/main.rs"
 # validated against (workspace version 0.17.0-rc.9). `miden-usdcx` is not published on crates.io
 # yet; once a release containing the PR exists, replace the three lines with that version.
 [dependencies]
-miden-protocol  = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb" }
-miden-standards = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb" }
-miden-usdcx     = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb" }
+miden-protocol  = { git = "https://github.com/0xMiden/protocol", rev = "372a8f7090faf2c6bd25ba41dff4a0053e9d4300" }
+miden-standards = { git = "https://github.com/0xMiden/protocol", rev = "372a8f7090faf2c6bd25ba41dff4a0053e9d4300" }
+miden-usdcx     = { git = "https://github.com/0xMiden/protocol", rev = "372a8f7090faf2c6bd25ba41dff4a0053e9d4300" }
 hex = "0.4"
 thiserror = "2"
 
 [dev-dependencies]
 anyhow = "1"
 # `AccountId::dummy` for deterministic test ids
-miden-protocol = { git = "https://github.com/0xMiden/protocol", rev = "9ba5e30bfb56a3e924d03446292ff91c01cb29fb", features = ["testing"] }
+miden-protocol = { git = "https://github.com/0xMiden/protocol", rev = "372a8f7090faf2c6bd25ba41dff4a0053e9d4300", features = ["testing"] }
+# the golden burn vectors used by the tests are behind the `testing` feature
+miden-usdcx = { git = "https://github.com/0xMiden/protocol", rev = "372a8f7090faf2c6bd25ba41dff4a0053e9d4300", features = ["testing"] }

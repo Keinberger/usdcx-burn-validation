@@ -1896,7 +1896,7 @@ dependencies = [
 [[package]]
 name = "miden-agglayer"
 version = "0.17.0-rc.9"
-source = "git+https://github.com/0xMiden/protocol?rev=9ba5e30bfb56a3e924d03446292ff91c01cb29fb#9ba5e30bfb56a3e924d03446292ff91c01cb29fb"
+source = "git+https://github.com/0xMiden/protocol?rev=372a8f7090faf2c6bd25ba41dff4a0053e9d4300#372a8f7090faf2c6bd25ba41dff4a0053e9d4300"
 dependencies = [
  "alloy-sol-types",
  "fs-err",
@@ -2357,7 +2357,7 @@ dependencies = [
 [[package]]
 name = "miden-protocol"
 version = "0.17.0-rc.9"
-source = "git+https://github.com/0xMiden/protocol?rev=9ba5e30bfb56a3e924d03446292ff91c01cb29fb#9ba5e30bfb56a3e924d03446292ff91c01cb29fb"
+source = "git+https://github.com/0xMiden/protocol?rev=372a8f7090faf2c6bd25ba41dff4a0053e9d4300#372a8f7090faf2c6bd25ba41dff4a0053e9d4300"
 dependencies = [
  "bech32",
  "fs-err",
@@ -2388,7 +2388,7 @@ dependencies = [
 [[package]]
 name = "miden-protocol-build-utils"
 version = "0.17.0-rc.9"
-source = "git+https://github.com/0xMiden/protocol?rev=9ba5e30bfb56a3e924d03446292ff91c01cb29fb#9ba5e30bfb56a3e924d03446292ff91c01cb29fb"
+source = "git+https://github.com/0xMiden/protocol?rev=372a8f7090faf2c6bd25ba41dff4a0053e9d4300#372a8f7090faf2c6bd25ba41dff4a0053e9d4300"
 dependencies = [
  "fs-err",
  "miden-assembly",
@@ -2441,7 +2441,7 @@ dependencies = [
 [[package]]
 name = "miden-standards"
 version = "0.17.0-rc.9"
-source = "git+https://github.com/0xMiden/protocol?rev=9ba5e30bfb56a3e924d03446292ff91c01cb29fb#9ba5e30bfb56a3e924d03446292ff91c01cb29fb"
+source = "git+https://github.com/0xMiden/protocol?rev=372a8f7090faf2c6bd25ba41dff4a0053e9d4300#372a8f7090faf2c6bd25ba41dff4a0053e9d4300"
 dependencies = [
  "bon",
  "miden-assembly",
@@ -2478,7 +2478,7 @@ dependencies = [
 [[package]]
 name = "miden-tx"
 version = "0.17.0-rc.9"
-source = "git+https://github.com/0xMiden/protocol?rev=9ba5e30bfb56a3e924d03446292ff91c01cb29fb#9ba5e30bfb56a3e924d03446292ff91c01cb29fb"
+source = "git+https://github.com/0xMiden/protocol?rev=372a8f7090faf2c6bd25ba41dff4a0053e9d4300#372a8f7090faf2c6bd25ba41dff4a0053e9d4300"
 dependencies = [
  "bon",
  "miden-agglayer",
@@ -2492,7 +2492,7 @@ dependencies = [
 [[package]]
 name = "miden-usdcx"
 version = "0.17.0-rc.9"
-source = "git+https://github.com/0xMiden/protocol?rev=9ba5e30bfb56a3e924d03446292ff91c01cb29fb#9ba5e30bfb56a3e924d03446292ff91c01cb29fb"
+source = "git+https://github.com/0xMiden/protocol?rev=372a8f7090faf2c6bd25ba41dff4a0053e9d4300#372a8f7090faf2c6bd25ba41dff4a0053e9d4300"
 dependencies = [
  "bon",
  "miden-assembly",
