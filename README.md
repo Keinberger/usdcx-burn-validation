@@ -76,14 +76,17 @@ cargo test
 ## Dependencies
 
 `Cargo.toml` pins `miden-protocol`, `miden-standards` and `miden-usdcx` as git dependencies on the
-commit of 0xMiden/protocol PR 3983 this crate was validated against. `miden-usdcx` is not published
-yet; once a release containing the PR exists, the three lines move to that version. Rust 1.98.1
-(`rust-toolchain.toml`). The first build fetches the protocol repository and compiles it, which
-takes several minutes.
+commit of 0xMiden/protocol PR 3983 this crate was validated against. The published `miden-usdcx`
+release does not yet contain these burn-format changes; once a release that includes the PR exists,
+the three lines move to that version. Rust 1.98.1 (`rust-toolchain.toml`). The first build fetches
+the protocol repository and compiles it, which takes several minutes.
 
 ## Differential check against the faucet
 
-`differential/differential_burn_validation.rs` is the test that was run inside the protocol tree
-(as `crates/miden-usdcx/tests/`, with this crate as a dev-dependency): for sixteen note variants the
-production faucet consumes the note in a MockChain and its verdict must equal this crate's. It is
-kept here for reference; it does not build standalone because it uses the protocol's test support.
+`differential/differential_burn_validation.rs` is a test written to run inside the protocol tree
+(as `crates/miden-usdcx/tests/`, with this crate as a dev-dependency). For each of sixteen note
+variants it has the production faucet attempt to consume the note in a MockChain and asserts the
+faucet's verdict (accept or reject, as expected for that variant) and this crate's verdict; two
+variants differ on purpose because the test faucet is configured with domain 7 while this crate
+fixes Miden to 10007. It is kept here for reference; it does not build standalone because it uses
+the protocol's test support, and anyone relying on it should run it themselves.

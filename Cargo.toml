@@ -13,8 +13,9 @@ name = "validate-burn"
 path = "src/main.rs"
 
 # The three Miden crates are pinned to the commit of 0xMiden/protocol PR 3983 that this crate was
-# validated against (workspace version 0.17.0-rc.9). `miden-usdcx` is not published on crates.io
-# yet; once a release containing the PR exists, replace the three lines with that version.
+# validated against (workspace version 0.17.0-rc.9). The published `miden-usdcx` release does not
+# yet contain these burn-format changes; once a release that includes the PR exists, replace the
+# three lines with that version.
 [dependencies]
 miden-protocol  = { git = "https://github.com/0xMiden/protocol", rev = "372a8f7090faf2c6bd25ba41dff4a0053e9d4300" }
 miden-standards = { git = "https://github.com/0xMiden/protocol", rev = "372a8f7090faf2c6bd25ba41dff4a0053e9d4300" }
