@@ -1,10 +1,10 @@
-//! The withdrawal attachment decoded by hand, without the `miden-usdcx` decoder.
+//! The withdrawal attachment read by hand, without the `miden-usdcx` decoder.
 //!
-//! This is the reference for a verifier that does not use the Miden Rust SDK (for example one
-//! written in another language). It spells out every rule the faucet's burn policy enforces on the
-//! attachment in the v17 format. Three things changed from v16: the scheme number, the positions
-//! of recipient and padding, and the rule that the padding must be zero (v16 ignored it); a
-//! verifier that uses the SDK path (`crate::validate_burn_note`) gets all three from the crate.
+//! This is the reference for a verifier that does not use the Miden Rust SDK, for example one
+//! written in another language. It spells out every rule the faucet enforces on the attachment in
+//! the v17 format. Three things changed from v16: the scheme number, the positions of recipient
+//! and padding, and the rule that the padding must be zero (v16 said to ignore it). A verifier on
+//! the SDK path (`crate::validate_burn_note`) gets all three from the crate.
 
 use miden_protocol::note::NoteAttachment;
 use miden_protocol::Felt;
@@ -32,21 +32,21 @@ fn felt_as_u32(felt: Felt) -> Option<u32> {
     u32::try_from(felt.as_canonical_u64()).ok()
 }
 
-/// Decodes the v17 withdrawal attachment:
+/// Reads the v17 withdrawal attachment:
 ///
 /// - scheme 5;
 /// - exactly three words, that is twelve felts;
 /// - felt 0: the destination domain, must fit in a u32;
 /// - felts 1 to 3: must be zero;
-/// - felts 4 to 11: the recipient as eight values that must each fit in a u32; each value becomes
+/// - felts 4 to 11: the recipient, eight values that must each fit in a u32; each value becomes
 ///   four bytes, least significant byte first, and the eight groups are joined in order into the
 ///   32-byte recipient.
 ///
-/// v16 differed in the scheme (6) and in the positions: the recipient sat at felts 1 to 8 and the
-/// padding at felts 9 to 11, and the padding was ignored rather than required to be zero.
+/// In v16 the scheme was 6, the recipient sat at felts 1 to 8, the padding at felts 9 to 11, and
+/// the padding was ignored rather than required to be zero.
 ///
-/// The scheme check here is a convenience for callers of this function alone;
-/// `crate::validate_burn_note_manual` selects the attachment by scheme before calling it.
+/// The scheme check is for callers of this function alone; `crate::validate_burn_note_manual`
+/// already selects the attachment by scheme before calling it.
 pub fn decode_withdrawal_attachment(
     attachment: &NoteAttachment,
 ) -> Result<Destination, BurnValidationError> {

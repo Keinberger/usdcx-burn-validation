@@ -1,21 +1,21 @@
-//! Validation of a USDCx burn note, step by step, in the v17 format (0xMiden/protocol PR 3983).
+//! Checks a USDCx burn note in the v17 format (0xMiden/protocol PR 3983).
 //!
 //! Input: a public note fetched by its ID (`GetNotesById`) and the USDCx faucet account ID.
-//! Output: the values a withdrawal needs (`remoteDepositor`, amount, destination domain and
-//! recipient), or the first check that failed.
+//! Output: the four values a withdrawal needs (burn ID, depositor, amount, destination), or the
+//! first check that failed.
 //!
-//! Two ways to decode the withdrawal attachment are provided, and they must agree:
+//! The destination is read from the note's withdrawal attachment. There are two ways to read it,
+//! and they must give the same answer:
 //!
-//! - [`validate_burn_note`] uses the Miden Rust SDK (`miden-usdcx`), the protocol crate's own
-//!   codec, the one the withdrawal attester decodes with. The call
-//!   `XUsdcBurnAttachment::try_from(&attachment)?.into_items()` is the same in v16 and v17, so a
-//!   verifier that uses only it moves between them by bumping the three Miden crates together.
-//! - [`validate_burn_note_manual`] decodes the attachment by hand ([`manual`]), for a verifier
-//!   written without the SDK. That path has to change its scheme number and felt offsets from v16
-//!   to v17; the module spells them out.
+//! - [`validate_burn_note`] uses the Miden Rust SDK (`miden-usdcx`), the decoder our withdrawal
+//!   attester uses. The call `XUsdcBurnAttachment::try_from(&attachment)?.into_items()` is the same
+//!   in v16 and v17; a verifier that uses only it moves between them by updating the three Miden
+//!   crates together.
+//! - [`validate_burn_note_manual`] reads the attachment by hand ([`manual`]), for a verifier
+//!   written without the SDK. That path changes between v16 and v17; the module spells out how.
 //!
-//! What neither does: prove that the note was consumed. Consumption is a separate step
-//! (`GetNetworkNoteStatus(noteId)` must report `NullifierCommitted`); see `main.rs`.
+//! Neither proves that the note was consumed. That is a separate step:
+//! `GetNetworkNoteStatus(noteId)` must report `NullifierCommitted`.
 
 pub mod manual;
 
@@ -127,16 +127,16 @@ fn validate_with(
         return Err(BurnValidationError::NotPublic);
     }
 
-    // 2. The script is the stock miden-standards BurnNote script. This is what makes "consumed"
-    //    mean "burned by the faucet": the script only calls the faucet's `receive_and_burn`. The
-    //    root changes with the miden-standards release; it is read from the crate here. A verifier
+    // 2. The script is the standard BurnNote script. This is what makes "consumed" mean "burned
+    //    by the faucet": the script does nothing but call the faucet's `receive_and_burn`. The
+    //    root changes with each miden-standards release; here it comes from the crate. A verifier
     //    with a hard-coded root must update it for v17.
     if note.script().root() != BurnNote::script_root() {
         return Err(BurnValidationError::WrongScript);
     }
 
-    // The tag is deliberately not a criterion: our wallet sets `FIXED_XUSDC_BURN_TAG`, but neither
-    // the faucet nor the attester refuses a burn for its tag, so a verifier must not either.
+    // The tag is deliberately not checked: our wallet sets `FIXED_XUSDC_BURN_TAG`, but neither
+    // the faucet nor our attester refuses a burn because of its tag, so a verifier must not either.
 
     // 3. Exactly two attachments: routing and withdrawal payload.
     let attachments = note.attachments();
@@ -155,8 +155,8 @@ fn validate_with(
         return Err(BurnValidationError::RoutingTarget);
     }
 
-    // 5. The withdrawal attachment decodes: exactly three words, destination domain at felt 0 as
-    //    a u32, felts 1 to 3 zero, recipient at felts 4 to 11 as eight u32 values.
+    // 5. The withdrawal attachment decodes: three words; the destination domain at felt 0 as a
+    //    u32; felts 1 to 3 zero; the recipient at felts 4 to 11 as eight u32 values.
     let withdrawal = attachments
         .iter()
         .find(|attachment| {

@@ -2,11 +2,11 @@
 //!
 //! Reads a serialized `Note` (hex, as `Note::to_bytes()` writes it) and the USDCx faucet account
 //! ID (`0x…` hex or bech32), runs the checks, and prints the withdrawal values. By default the
-//! withdrawal attachment is decoded with the `miden-usdcx` crate; `--manual` decodes it by hand
+//! withdrawal attachment is read with the `miden-usdcx` crate; `--manual` reads it by hand
 //! (`src/manual.rs`) and must give the same answer.
 //!
-//! Fetching the note is the caller's job: `GetNotesById(noteId)` on a Miden node returns the
-//! public note with its details. Consumption is checked separately with
+//! Fetching the note is the caller's job: `GetNotesById(noteId)` on a Miden node returns a public
+//! note with its details. Whether the note was consumed is a separate check,
 //! `GetNetworkNoteStatus(noteId)`: only `NullifierCommitted` means the faucet burned it.
 
 use std::process::ExitCode;
