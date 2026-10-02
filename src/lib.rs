@@ -1,14 +1,26 @@
-//! Validation of a USDCx burn note, step by step, with the decoder the faucet's Rust code uses.
+//! Validation of a USDCx burn note, step by step, in the v17 format (0xMiden/protocol PR 3983).
 //!
 //! Input: a public note fetched by its ID (`GetNotesById`) and the USDCx faucet account ID.
 //! Output: the values a withdrawal needs (`remoteDepositor`, amount, destination domain and
 //! recipient), or the first check that failed.
 //!
-//! What this does NOT do: prove that the note was consumed. Consumption is a separate step
+//! Two ways to decode the withdrawal attachment are provided, and they must agree:
+//!
+//! - [`validate_burn_note`] uses the Miden Rust SDK (`miden-usdcx`), the same decoder the faucet's
+//!   own Rust code uses. A verifier built this way does not depend on the attachment format: the
+//!   high-level API (`XUsdcBurnAttachment::try_from(&attachment)?.items()`) is the same in v16 and
+//!   v17, so moving between them is a dependency bump.
+//! - [`validate_burn_note_manual`] decodes the attachment by hand ([`manual`]), for a verifier
+//!   written without the SDK. That path has to change its scheme number and felt offsets from v16
+//!   to v17; the module spells them out.
+//!
+//! What neither does: prove that the note was consumed. Consumption is a separate step
 //! (`GetNetworkNoteStatus(noteId)` must report `NullifierCommitted`); see `main.rs`.
 
+pub mod manual;
+
 use miden_protocol::account::AccountId;
-use miden_protocol::note::{Note, NoteId, NoteType};
+use miden_protocol::note::{Note, NoteAttachment, NoteId, NoteType};
 use miden_standards::interop::eth::EthEmbeddedAccountId;
 use miden_standards::note::{BurnNote, NetworkAccountTarget};
 use miden_usdcx::note::xreserve_burn::{
@@ -63,12 +75,52 @@ pub enum BurnValidationError {
     StorageMismatch,
 }
 
-/// Runs every structural check on `note` and returns the withdrawal values.
+/// A decoder for the withdrawal attachment: destination domain and 32-byte recipient.
+type Decoder = fn(&NoteAttachment) -> Result<(u32, [u8; 32]), BurnValidationError>;
+
+/// Decodes the withdrawal attachment with the Miden Rust SDK: the `miden-usdcx` crate's own
+/// decoder, which is what the faucet's Rust code and the withdrawal attester use.
 ///
-/// The order matters only for which error is reported; a note must pass all of them.
+/// This call is the same in v16 and v17. The scheme number and the layout live inside the crate,
+/// so a verifier written this way moves between the two by bumping the dependency.
+fn decode_with_sdk(attachment: &NoteAttachment) -> Result<(u32, [u8; 32]), BurnValidationError> {
+    let items = XUsdcBurnAttachment::try_from(attachment)
+        .map_err(|_| BurnValidationError::WithdrawalMalformed)?
+        .into_items();
+    Ok((items.dest_domain.as_u32(), *items.dest_recipient.as_bytes()))
+}
+
+/// Decodes the withdrawal attachment by hand, with the rules written out in [`manual`].
+fn decode_by_hand(attachment: &NoteAttachment) -> Result<(u32, [u8; 32]), BurnValidationError> {
+    let destination = manual::decode_withdrawal_attachment(attachment)?;
+    Ok((destination.dest_domain, destination.dest_recipient))
+}
+
+/// Runs every structural check on `note` and returns the withdrawal values, decoding the
+/// withdrawal attachment with the Miden Rust SDK (`miden-usdcx`).
 pub fn validate_burn_note(
     note: &Note,
     faucet: AccountId,
+) -> Result<VerifiedBurn, BurnValidationError> {
+    validate_with(note, faucet, decode_with_sdk)
+}
+
+/// Runs every structural check on `note` and returns the withdrawal values, decoding the
+/// withdrawal attachment by hand ([`manual::decode_withdrawal_attachment`]). Produces the same
+/// result as [`validate_burn_note`] for every note; the tests pin that.
+pub fn validate_burn_note_manual(
+    note: &Note,
+    faucet: AccountId,
+) -> Result<VerifiedBurn, BurnValidationError> {
+    validate_with(note, faucet, decode_by_hand)
+}
+
+/// The checks, in order. Only the decoding of the withdrawal attachment differs between the two
+/// public entry points.
+fn validate_with(
+    note: &Note,
+    faucet: AccountId,
+    decode: Decoder,
 ) -> Result<VerifiedBurn, BurnValidationError> {
     // 1. Public: a private note cannot be read from the node, so it cannot be verified.
     if note.metadata().note_type() != NoteType::Public {
@@ -76,7 +128,9 @@ pub fn validate_burn_note(
     }
 
     // 2. The script is the stock miden-standards BurnNote script. This is what makes "consumed"
-    //    mean "burned by the faucet": the script only calls the faucet's `receive_and_burn`.
+    //    mean "burned by the faucet": the script only calls the faucet's `receive_and_burn`. The
+    //    root changes with the miden-standards release; it is read from the crate here. A verifier
+    //    with a hard-coded root must update it for v17.
     if note.script().root() != BurnNote::script_root() {
         return Err(BurnValidationError::WrongScript);
     }
@@ -101,21 +155,18 @@ pub fn validate_burn_note(
         return Err(BurnValidationError::RoutingTarget);
     }
 
-    // 5. The withdrawal attachment decodes. The decoder is the one the faucet's own Rust code
-    //    uses: exactly three words, destination domain at felt 0 as a u32, felts 1 to 3 zero,
-    //    recipient at felts 4 to 11 as eight u32 values.
+    // 5. The withdrawal attachment decodes: exactly three words, destination domain at felt 0 as
+    //    a u32, felts 1 to 3 zero, recipient at felts 4 to 11 as eight u32 values.
     let withdrawal = attachments
         .iter()
         .find(|attachment| {
             attachment.attachment_scheme().as_u16() == XRESERVE_BURN_WITHDRAWAL_ATTACHMENT_SCHEME
         })
         .ok_or(BurnValidationError::WithdrawalMissing)?;
-    let items = XUsdcBurnAttachment::try_from(withdrawal)
-        .map_err(|_| BurnValidationError::WithdrawalMalformed)?
-        .into_items();
+    let (dest_domain, dest_recipient) = decode(withdrawal)?;
 
     // 6. Not a withdrawal to Miden itself.
-    if items.dest_domain.as_u32() == CircleDomain::MIDEN.as_u32() {
+    if dest_domain == CircleDomain::MIDEN.as_u32() {
         return Err(BurnValidationError::DestinationIsMiden);
     }
 
@@ -140,7 +191,7 @@ pub fn validate_burn_note(
         remote_depositor: sender,
         remote_depositor_bytes32: EthEmbeddedAccountId::from_account_id(sender).to_bytes32(),
         amount,
-        dest_domain: items.dest_domain.as_u32(),
-        dest_recipient: *items.dest_recipient.as_bytes(),
+        dest_domain,
+        dest_recipient,
     })
 }

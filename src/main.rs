@@ -1,7 +1,9 @@
-//! `validate-burn <note.hex> <faucet-id>`
+//! `validate-burn <note.hex> <faucet-id> [--manual]`
 //!
 //! Reads a serialized `Note` (hex, as `Note::to_bytes()` writes it) and the USDCx faucet account
-//! ID (`0x…` hex or bech32), runs the checks, and prints the withdrawal values.
+//! ID (`0x…` hex or bech32), runs the checks, and prints the withdrawal values. By default the
+//! withdrawal attachment is decoded with the `miden-usdcx` crate; `--manual` decodes it by hand
+//! (`src/manual.rs`) and must give the same answer.
 //!
 //! Fetching the note is the caller's job: `GetNotesById(noteId)` on a Miden node returns the
 //! public note with its details. Consumption is checked separately with
@@ -12,7 +14,7 @@ use std::process::ExitCode;
 use miden_protocol::account::AccountId;
 use miden_protocol::note::Note;
 use miden_protocol::utils::serde::Deserializable;
-use usdcx_burn_validation::validate_burn_note;
+use usdcx_burn_validation::{validate_burn_note, validate_burn_note_manual};
 
 fn parse_account_id(text: &str) -> Result<AccountId, String> {
     if text.starts_with("0x") {
@@ -36,9 +38,13 @@ fn strip_hex_prefix(text: &str) -> &str {
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().collect();
-    let [_, note_path, faucet] = args.as_slice() else {
-        eprintln!("usage: validate-burn <note.hex> <faucet-id>");
-        return ExitCode::from(2);
+    let (note_path, faucet, manual) = match args.as_slice() {
+        [_, note_path, faucet] => (note_path, faucet, false),
+        [_, note_path, faucet, flag] if flag == "--manual" => (note_path, faucet, true),
+        _ => {
+            eprintln!("usage: validate-burn <note.hex> <faucet-id> [--manual]");
+            return ExitCode::from(2);
+        }
     };
 
     let note = std::fs::read_to_string(note_path)
@@ -60,9 +66,21 @@ fn main() -> ExitCode {
         }
     };
 
-    match validate_burn_note(&note, faucet) {
+    let result = if manual {
+        validate_burn_note_manual(&note, faucet)
+    } else {
+        validate_burn_note(&note, faucet)
+    };
+    match result {
         Ok(burn) => {
-            println!("valid burn note");
+            println!(
+                "valid burn note (attachment decoded {})",
+                if manual {
+                    "by hand"
+                } else {
+                    "with the miden-usdcx crate"
+                }
+            );
             println!("burnTxId        {}", burn.note_id);
             println!(
                 "remoteDepositor 0x{}",
