@@ -118,8 +118,8 @@ fn both_decoders_agree_on_a_crate_built_note() -> Result<()> {
     Ok(())
 }
 
-/// Hand-made edge cases: a non-u32 limb, non-zero padding, a wrong word count and the old scheme
-/// number fail the same way through both decoders.
+/// Hand-made edge cases: a non-u32 limb, non-zero padding and a wrong word count fail the same way
+/// through both decoders; the old scheme number is refused before either decoder runs.
 #[test]
 fn both_decoders_agree_on_malformed_attachments() -> Result<()> {
     let good = XReserveBurnItems {

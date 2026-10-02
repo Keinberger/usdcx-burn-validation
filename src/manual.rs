@@ -2,9 +2,9 @@
 //!
 //! This is the reference for a verifier that does not use the Miden Rust SDK (for example one
 //! written in another language). It spells out every rule the faucet's burn policy enforces on the
-//! attachment in the v17 format. The constants and offsets below are the two things that changed
-//! from v16; a verifier that uses the SDK path (`crate::validate_burn_note`) gets them from the
-//! crate and does not need this file.
+//! attachment in the v17 format. Three things changed from v16: the scheme number, the positions
+//! of recipient and padding, and the rule that the padding must be zero (v16 ignored it); a
+//! verifier that uses the SDK path (`crate::validate_burn_note`) gets all three from the crate.
 
 use miden_protocol::note::NoteAttachment;
 use miden_protocol::Felt;
@@ -43,7 +43,10 @@ fn felt_as_u32(felt: Felt) -> Option<u32> {
 ///   32-byte recipient.
 ///
 /// v16 differed in the scheme (6) and in the positions: the recipient sat at felts 1 to 8 and the
-/// padding at felts 9 to 11.
+/// padding at felts 9 to 11, and the padding was ignored rather than required to be zero.
+///
+/// The scheme check here is a convenience for callers of this function alone;
+/// `crate::validate_burn_note_manual` selects the attachment by scheme before calling it.
 pub fn decode_withdrawal_attachment(
     attachment: &NoteAttachment,
 ) -> Result<Destination, BurnValidationError> {

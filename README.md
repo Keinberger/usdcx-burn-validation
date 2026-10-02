@@ -4,15 +4,15 @@ Validates one USDCx burn note in the v17 format (0xMiden/protocol PR 3983), with
 the faucet's burn policy enforces before it burns. It covers the structural checks; consumption is
 a separate step (`GetNetworkNoteStatus(noteId)` must report `NullifierCommitted`).
 
-The withdrawal attachment, the part of the note that changed between v16 and v17, can be decoded
-in two ways, and this crate shows both:
+The withdrawal attachment and the script root are the parts of the note that changed between v16
+and v17. The attachment can be decoded in two ways, and this crate shows both:
 
 | | With the Miden Rust SDK (`miden-usdcx`) | By hand |
 |---|---|---|
 | Entry point | `validate_burn_note` | `validate_burn_note_manual` |
 | Decoder | `XUsdcBurnAttachment::try_from(&attachment)?.items()` | `src/manual.rs` |
 | For | a verifier written in Rust | a verifier in another language, or one that reads felts itself |
-| v16 to v17 | bump the crate; the call is unchanged, scheme and layout come with it | change the scheme number (6 to 5) and the felt offsets |
+| v16 to v17 | bump the three Miden crates together; the call in this README is unchanged, scheme and layout come with it (three v16 constants were removed, see Path 1) | change the scheme number (6 to 5), the felt offsets, add the rule that felts 1 to 3 are zero (v16 ignored them), and take the new script root |
 
 Both paths produce the same result for every note; `tests/manual_vs_sdk.rs` pins that against the
 protocol's golden vectors and hand-made edge cases.
@@ -68,12 +68,21 @@ let dest_domain = items.dest_domain.as_u32();
 let dest_recipient: [u8; 32] = *items.dest_recipient.as_bytes();
 ```
 
-This is the decoder the faucet's own Rust code and the Miden withdrawal attester use. It accepts
-exactly what the burn policy accepts and rejects exactly what the policy rejects (the crate's
-golden vectors pin both). The scheme constant and the layout are inside the crate, so **a verifier
-written this way moves from v16 to v17 by bumping the dependency**; the call above is the same in
-both. Only the low-level codec changed (`Vec<Felt>` to `[Word; 3]`). The same holds for the script
-root: `BurnNote::script_root()` returns the root of the `miden-standards` release you depend on.
+This is the protocol crate's codec, the one the Miden withdrawal attester decodes with. On the
+attachment it accepts and rejects what the burn policy accepts and rejects: the crate's golden
+vectors pin the Rust codec, the protocol's MockChain tests pin the MASM policy, and the differential
+test in `differential/` ran both on the same notes. The policy's two account-state rules
+(configured domain, minimum burn amount) are outside the codec; see "What the faucet does and does
+not enforce".
+
+The scheme constant and the layout are inside the crate, so **a verifier that uses only the call
+above moves from v16 to v17 by bumping `miden-usdcx`, `miden-protocol` and `miden-standards`
+together**; the call is the same in both. What did change in the public API:
+`XReserveBurnItems::encode` now returns `[Word; 3]` instead of `Vec<Felt>` and `decode` takes
+`&[Word]`; the constants `XRESERVE_BURN_WITHDRAWAL_ATTACHMENT_WORDS`, `BURN_NOTE_ITEMS_FELTS` and
+`XReserveBurnNote::NUM_PAYLOAD_ITEMS` are gone (use `XUsdcBurnAttachment::NUM_WORDS`). A verifier
+that referenced any of those must touch that line. The script root also moves:
+`BurnNote::script_root()` returns the root of the `miden-standards` release you depend on.
 
 Until a release of `miden-usdcx` contains PR 3983, pin the git commit as this crate's `Cargo.toml`
 does.
@@ -91,10 +100,11 @@ MASM policy asserts:
   bytes, least significant byte first, and the eight groups are joined in order into the 32-byte
   recipient.
 
-v16 had the recipient at felts 1 to 8 and the padding at felts 9 to 11. Change the scheme number
-and the offsets together: with a left-padded EVM address (twelve leading zero bytes) the old word
-order under scheme 5 still decodes, to a different recipient (`tests/local_burn.rs` pins that
-hazard). A hand-written verifier also has to update its `BurnNote` script root for v17; that root
+v16 had the recipient at felts 1 to 8 and three padding felts at 9 to 11 that a verifier was told
+to ignore; v17 moves the padding to felts 1 to 3 and requires it to be zero. Change the scheme
+number, the offsets and the padding rule together: with a left-padded EVM address (twelve leading
+zero bytes) the old word order under scheme 5 still decodes, to a different recipient
+(`tests/local_burn.rs` pins that hazard). A hand-written verifier also has to update its `BurnNote` script root for v17; that root
 is not derivable by hand, take it from `miden_standards::note::BurnNote::script_root()` of the
 deployed release.
 
@@ -105,7 +115,8 @@ faucet, the scheme-5 attachment has three words, the domain is a u32 other than 
 configured domain (10007), the three padding felts are zero, the eight recipient values are u32. The
 stock burn script enforces: eight storage felts, one asset, storage equals the asset.
 `receive_and_burn` enforces that the asset was issued by this faucet. All of these are in this
-program.
+program. This program fixes the Miden domain to 10007; the faucet reads its configured domain from
+storage, so take the value from the deployment notice.
 
 Not enforced on chain: the note type, the tag and the script root (the script root is enforced
 indirectly: the faucet only consumes allowlisted note scripts). Two on-chain checks are account
@@ -134,10 +145,12 @@ cargo test
 ## Dependencies
 
 `Cargo.toml` pins `miden-protocol`, `miden-standards` and `miden-usdcx` as git dependencies on the
-commit of 0xMiden/protocol PR 3983 this crate was validated against. The published `miden-usdcx`
-release does not yet contain these burn-format changes; once a release that includes the PR exists,
-the three lines move to that version. Rust 1.98.1 (`rust-toolchain.toml`). The first build fetches
-the protocol repository and compiles it, which takes several minutes.
+final head of 0xMiden/protocol PR 3983 (merged into `next` on 2026-10-01), the commit this crate
+was validated against. The published `miden-usdcx` release (0.17.0-rc.9 on crates.io, the same
+version string as the pinned workspace) still has the v16 format: scheme 6 and the nine-felt
+layout. Do not substitute it. Once a release that includes the PR exists, the three lines move to
+that version. Rust 1.98.1 (`rust-toolchain.toml`). The first build fetches the protocol repository
+and compiles it, which takes several minutes.
 
 ## Differential check against the faucet
 
@@ -146,6 +159,10 @@ the protocol repository and compiles it, which takes several minutes.
 variants it has the production faucet attempt to consume the note in a MockChain and asserts the
 faucet's verdict (accept or reject, as expected for that variant) and this crate's verdict; two
 variants differ on purpose because the test faucet is configured with domain 7 while this crate
-fixes Miden to 10007. `differential/differential-run-2026-10-01.log` is one recorded run. It is
-kept here for reference; it does not build standalone because it uses the protocol's test support,
-and anyone relying on it should run it themselves.
+fixes Miden to 10007. `differential/differential-run-2026-10-01.log` is one recorded run, made
+against PR commit `d1d3e6a` (the PR head before its final merge of `next`; the burn policy and
+codec are identical to the pinned `372a8f7`) with the previous `src/lib.rs`, before the
+hand-written path was added. The SDK path it exercised is unchanged; the manual path is covered by
+`tests/manual_vs_sdk.rs`, not by this log. The test is kept here for reference; it does not build
+standalone because it uses the protocol's test support, and anyone relying on it should run it
+themselves.

@@ -6,10 +6,10 @@
 //!
 //! Two ways to decode the withdrawal attachment are provided, and they must agree:
 //!
-//! - [`validate_burn_note`] uses the Miden Rust SDK (`miden-usdcx`), the same decoder the faucet's
-//!   own Rust code uses. A verifier built this way does not depend on the attachment format: the
-//!   high-level API (`XUsdcBurnAttachment::try_from(&attachment)?.items()`) is the same in v16 and
-//!   v17, so moving between them is a dependency bump.
+//! - [`validate_burn_note`] uses the Miden Rust SDK (`miden-usdcx`), the protocol crate's own
+//!   codec, the one the withdrawal attester decodes with. The call
+//!   `XUsdcBurnAttachment::try_from(&attachment)?.into_items()` is the same in v16 and v17, so a
+//!   verifier that uses only it moves between them by bumping the three Miden crates together.
 //! - [`validate_burn_note_manual`] decodes the attachment by hand ([`manual`]), for a verifier
 //!   written without the SDK. That path has to change its scheme number and felt offsets from v16
 //!   to v17; the module spells them out.
@@ -78,8 +78,8 @@ pub enum BurnValidationError {
 /// A decoder for the withdrawal attachment: destination domain and 32-byte recipient.
 type Decoder = fn(&NoteAttachment) -> Result<(u32, [u8; 32]), BurnValidationError>;
 
-/// Decodes the withdrawal attachment with the Miden Rust SDK: the `miden-usdcx` crate's own
-/// decoder, which is what the faucet's Rust code and the withdrawal attester use.
+/// Decodes the withdrawal attachment with the Miden Rust SDK: the protocol crate's own codec, the
+/// one the Miden withdrawal attester decodes with.
 ///
 /// This call is the same in v16 and v17. The scheme number and the layout live inside the crate,
 /// so a verifier written this way moves between the two by bumping the dependency.

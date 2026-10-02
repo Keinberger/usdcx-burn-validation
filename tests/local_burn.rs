@@ -279,6 +279,27 @@ fn the_cli_validates_a_serialized_note() -> Result<()> {
         "{stdout}"
     );
 
+    // the hand-written decoder gives the same lines
+    let manual = std::process::Command::new(env!("CARGO_BIN_EXE_validate-burn"))
+        .arg(&path)
+        .arg(faucet().to_hex())
+        .arg("--manual")
+        .output()?;
+    let manual_stdout = String::from_utf8(manual.stdout)?;
+    assert!(manual.status.success(), "{manual_stdout}");
+    assert!(
+        manual_stdout.contains("valid burn note (attachment decoded by hand)"),
+        "{manual_stdout}"
+    );
+    for line in stdout.lines().filter(|line| {
+        line.starts_with("burnTxId")
+            || line.starts_with("remoteDepositor")
+            || line.starts_with("destDomain")
+            || line.starts_with("destRecipient")
+    }) {
+        assert!(manual_stdout.contains(line), "{manual_stdout}");
+    }
+
     let wrong = std::process::Command::new(env!("CARGO_BIN_EXE_validate-burn"))
         .arg(&path)
         .arg(other_faucet().to_hex())
